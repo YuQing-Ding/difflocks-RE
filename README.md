@@ -174,9 +174,8 @@ Notes:
 
 ## Unreal Engine Groom Import (Rendering + Physics)
 
-<center>
-    ![MHC_LightingPreset_Split_RT_(2)_2](https://github.com/user-attachments/assets/33d7e55c-5bb9-4efc-a2f4-9b04711fe179)
-</center>
+<img src="https://github.com/user-attachments/assets/33d7e55c-5bb9-4efc-a2f4-9b04711fe179" alt="MHC_LightingPreset_Split_RT" style="display:block; margin:0 auto;">
+
 This section describes a minimal, practical workflow for importing the exported `.abc` into UE and enabling Groom rendering and physics.
 
 1. Enable plugins:
