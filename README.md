@@ -174,7 +174,7 @@ Notes:
 
 ## Unreal Engine Groom Import (Rendering + Physics)
 
-![MHC_LightingPreset_Split_RT_(2)_2](https://github.com/user-attachments/assets/33d7e55c-5bb9-4efc-a2f4-9b04711fe179)
+<center>![MHC_LightingPreset_Split_RT_(2)_2](https://github.com/user-attachments/assets/33d7e55c-5bb9-4efc-a2f4-9b04711fe179)</center>
 
 This section describes a minimal, practical workflow for importing the exported `.abc` into UE and enabling Groom rendering and physics.
 
