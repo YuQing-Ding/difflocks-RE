@@ -96,6 +96,7 @@ def run():
     parser.add_argument('--alembic_resolution', default=7, type=int, help='Resolution of the exported alembic')
     parser.add_argument('--export_alembic', action='store_true', help='weather to export alembic or not')
     parser.add_argument('--do_shrinkwrap', action='store_true', help='applies a shrinkwrap modifier in blender that pushes the strands away from the scalp so they dont pass through the head')
+    parser.add_argument('--ue', action='store_true', help='apply UE-friendly rotation to the exported abc (x=-90, z=180)')
     parser.add_argument('--img_path', type=str, required=True, help='Path to the image to do inference on')
     parser.add_argument('--out_path', type=str, required=True, help='Path to the image to do inference on')
     args = parser.parse_args()
@@ -107,7 +108,9 @@ def run():
 
     #run----
     # img_path="./samples/medium_11.png"
-    strand_points_world, hair_material_dict=difflocks.file2hair(args.img_path, args.out_path) 
+    base_name = os.path.splitext(os.path.basename(args.img_path))[0]
+    out_dir = os.path.join(args.out_path, base_name)
+    strand_points_world, hair_material_dict=difflocks.file2hair(args.img_path, out_dir, base_name=base_name) 
     print("hair_material_dict",hair_material_dict)
 
 
@@ -115,8 +118,8 @@ def run():
     if args.blender_path!="":
         repo_path = os.path.dirname(os.path.abspath(__file__))
         blender_executable = _resolve_blender_executable(args.blender_path)
-        input_npz = os.path.abspath(os.path.join(args.out_path, "difflocks_output_strands.npz"))
-        out_path = os.path.abspath(args.out_path)
+        input_npz = os.path.abspath(os.path.join(out_dir, f"{base_name}_difflocks_output_strands.npz"))
+        out_path = os.path.abspath(out_dir)
         blender_script, input_npz, out_path = _prepare_blender_command_args(
             blender_executable, repo_path, input_npz, out_path
         )
@@ -125,18 +128,20 @@ def run():
         print("Using Blender executable:", blender_executable)
         print("Alembic export enabled:", should_export_alembic)
 
-        cmd=[blender_executable, "-t", str(args.blender_nr_threads), "--background", "--python", blender_script, "--", "--input_npz", input_npz, "--out_path", out_path, "--strands_subsample", str(args.blender_strands_subsample), "--vertex_subsample", str(args.blender_vertex_subsample), "--alembic_resolution", str(args.alembic_resolution) ]
+        cmd=[blender_executable, "-t", str(args.blender_nr_threads), "--background", "--python", blender_script, "--", "--input_npz", input_npz, "--out_path", out_path, "--basename", base_name, "--strands_subsample", str(args.blender_strands_subsample), "--vertex_subsample", str(args.blender_vertex_subsample), "--alembic_resolution", str(args.alembic_resolution) ]
         if args.do_shrinkwrap:
             cmd.append("--shrinkwrap")
+        if args.ue:
+            cmd.append("--ue")
         if should_export_alembic or args.export_alembic:
             cmd.append("--export_alembic")
         subprocess.run(cmd, capture_output=False, check=True)
 
-        hair_abc_path = os.path.join(os.path.abspath(args.out_path), "hair.abc")
+        hair_abc_path = os.path.join(os.path.abspath(out_dir), f"{base_name}.abc")
         if not os.path.exists(hair_abc_path):
             raise FileNotFoundError(f"Blender finished but did not create {hair_abc_path}")
 
-    print("Finished writing to ", args.out_path)
+    print("Finished writing to ", out_dir)
 
 if __name__ == '__main__':
 

@@ -129,19 +129,23 @@ python inference_difflocks.py \
   --out_path ./outputs_inference/
 ```
 
-This writes the core inference outputs to `./outputs_inference/`, including:
+This writes outputs under a per-image subfolder:
 
-- `difflocks_output_strands.npz`
-- `scalp_texture.npz`
-- `rgb.png`
-- `hair.json`
+- `./outputs_inference/<image_name>/`
+
+Inside that folder you will get:
+
+- `<image_name>_difflocks_output_strands.npz`
+- `<image_name>_scalp_texture.npz`
+- `<image_name>_rgb.png`
+- `<image_name>.json`
 
 ## Export `.abc` and `.blend`
 
 If Blender is available, pass `--blender_path` and the script will export:
 
-- `hair.abc`
-- `blender_scene.blend`
+- `<image_name>.abc`
+- `<image_name>.blend`
 
 Example on Linux:
 
@@ -166,6 +170,36 @@ Notes:
 - `--blender_path` can point either to the Blender executable or to the Blender installation directory.
 - In the current repo setup, providing `--blender_path` is enough to export `hair.abc`; you do not need to manually add `--export_alembic`.
 - This flow has been tested with Windows Blender `5.1` launched from WSL.
+- For Unreal Engine, add `--ue` to rotate the export for correct orientation (x=-90, z=180).
+
+## Unreal Engine Groom Import (Rendering + Physics)
+
+This section describes a minimal, practical workflow for importing the exported `.abc` into UE and enabling Groom rendering and physics.
+
+1. Enable plugins:
+   - In UE, open `Edit > Plugins`.
+   - Enable `Groom` and `Alembic Groom Importer`.
+   - Restart the editor if prompted.
+
+2. Import the Alembic Groom:
+   - Drag `<image_name>.abc` into the Content Browser.
+   - In the import options, choose `Groom` as the asset type.
+   - If you did not use `--ue`, set the import rotation to `X=-90`, `Z=180`.
+     If you used `--ue`, you can keep the import rotation at defaults.
+
+
+3. Add the Groom to your character:
+   - Open your character Blueprint.
+   - Add a `Groom Component` and assign the Groom asset.
+
+4. Enable hair physics (basic setup):
+   - Open the Groom asset and enable simulation settings as needed.
+   - Ensure your character has a Physics Asset (for collisions).
+   - In the Groom asset, set the physics/collision settings to use that Physics Asset.
+
+Tips:
+- If hair flips or points the wrong way, use the `--ue` export flag.
+- If physics looks unstable, reduce strand count or lower simulation stiffness.
 
 ## Dataset
 

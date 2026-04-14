@@ -272,12 +272,22 @@ class DiffLocksInference():
         self.normalization_dict=DiffLocksDataset.get_normalization_data()
         self.scalp_trimesh, self.scalp_mesh_data=DiffLocksDataset.compute_scalp_data(os.path.join(DEFAULT_BODY_DATA_DIR,"scalp.ply"))
 
-    def rgb2hair(self, rgb_img, out_path=None):
+    def rgb2hair(self, rgb_img, out_path=None, base_name=None):
         assert rgb_img.shape[1] == 3, "rgb_img needs to have 3 channels"
         assert len(rgb_img.shape) == 4, "rgb_img needs to be in format BCHW, so it needs 4 dimensions"
 
         if out_path is not None:
-            os.makedirs(out_path,exist_ok=True)
+            os.makedirs(out_path, exist_ok=True)
+
+        def _name_path(filename):
+            if base_name is None:
+                return os.path.join(out_path, filename)
+            root, ext = os.path.splitext(filename)
+            if ext == "":
+                return os.path.join(out_path, f"{base_name}{filename}")
+            if root == "hair":
+                return os.path.join(out_path, f"{base_name}{ext}")
+            return os.path.join(out_path, f"{base_name}_{root}{ext}")
 
 
         #run mediapipe on it
@@ -328,7 +338,7 @@ class DiffLocksInference():
         scalp_texture=scalp_texture.float()
         scalp_texture_orig=scalp_texture
         if out_path:
-            np.savez(os.path.join(out_path, "scalp_texture.npz"), scalp_texture=scalp_texture_orig.cpu().numpy())
+            np.savez(_name_path("scalp_texture.npz"), scalp_texture=scalp_texture_orig.cpu().numpy())
         print("scalp_texture", scalp_texture.shape)
         scalp_texture = scalp_texture_orig[:,0:-1,:,:] #get only the scalp texture part
         # scalp_texture_pca = img_2_pca(scalp_texture)
@@ -369,23 +379,23 @@ class DiffLocksInference():
                     data["root_darkness_end"]=root_darkness_end
                     data["root_darkness_strength"]=root_darkness_strength
 
-                path_json=os.path.join(out_path,"hair.json")
+                path_json=_name_path("hair.json")
                 with open(path_json, 'w', encoding='utf-8') as f:
                     json.dump(data, f, ensure_ascii=False, indent=4)
         
         if out_path:
-            npz_out_path=os.path.join(out_path, "difflocks_output_strands.npz")
+            npz_out_path=_name_path("difflocks_output_strands.npz")
             np.savez(npz_out_path, positions=strand_points_world.cpu().numpy())
 
         #save also img
         if out_path:
-            torchvision.utils.save_image(rgb_img, os.path.join(out_path, "rgb.png"))
+            torchvision.utils.save_image(rgb_img, _name_path("rgb.png"))
 
         return strand_points_world, hair_material_dict
 
 
 
-    def file2hair(self, file_path, out_path):
+    def file2hair(self, file_path, out_path, base_name=None):
         frame=cv2.imread(file_path)
 
         frame = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
@@ -394,7 +404,9 @@ class DiffLocksInference():
         rgb_img=rgb_img.permute(2,0,1).unsqueeze(0).float()/255.0
 
 
-        strand_points_world, hair_material_dict = self.rgb2hair(rgb_img, out_path) 
+        if base_name is None:
+            base_name = os.path.splitext(os.path.basename(file_path))[0]
+        strand_points_world, hair_material_dict = self.rgb2hair(rgb_img, out_path, base_name=base_name) 
 
         return strand_points_world, hair_material_dict
 

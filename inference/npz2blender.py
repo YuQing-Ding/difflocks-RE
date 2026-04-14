@@ -32,7 +32,27 @@ import time
 
 path_cur_script=os.path.dirname(os.path.abspath(__file__))
 
-def export_alembic(out_alembic_path, resolution):
+def _apply_ue_rotation():
+    # UE import expects x=-90, z=180 for correct orientation.
+    targets = []
+    hair_obj = bpy.data.objects.get("hair_01")
+    if hair_obj is not None:
+        targets.append(hair_obj)
+    scalp_obj = bpy.data.objects.get("smplx_scalp_blender")
+    if scalp_obj is not None:
+        targets.append(scalp_obj)
+
+    for obj in targets:
+        obj.rotation_euler = (math.radians(-90.0), 0.0, math.radians(180.0))
+        bpy.context.view_layer.objects.active = obj
+        try:
+            bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+        except RuntimeError:
+            # Some objects might not support applying transforms in this context.
+            pass
+
+
+def export_alembic(out_alembic_path, resolution, ue_rotation=False):
     print("-------------------------------------------")
     
     # bpy.ops.outliner.item_activate(deselect_all=True)
@@ -65,7 +85,7 @@ def export_alembic(out_alembic_path, resolution):
 
 
 
-    #conver particle
+    #convert particle
     bpy.ops.curves.convert_to_particle_system()
 
     # bpy.ops.outliner.item_activate(deselect_all=True)
@@ -100,6 +120,9 @@ def export_alembic(out_alembic_path, resolution):
     bpy.data.objects['smplx_scalp_blender'].show_instancer_for_viewport = False
     bpy.data.objects["smplx_scalp_blender"].select_set(True)
 
+    if ue_rotation:
+        _apply_ue_rotation()
+
     export_kwargs = {
         "filepath": out_alembic_path,
         "check_existing": False,
@@ -131,16 +154,20 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_npz', required=True) #npz file to read and create a alembic from
     parser.add_argument('--out_path', required=True) #output path for the blender file and the alembic
+    parser.add_argument('--basename', default="hair") #base name for exported files
     parser.add_argument('--export_alembic', action='store_true') #set it to true to also export an alembic file
     parser.add_argument('-ss', '--strands_subsample', type=float, default=1.0)  # perentage of strands we keep (1.0=keep all, 0.5=keep half, 0.25=keep quarter)
     parser.add_argument('-vs', '--vertex_subsample', type=float, default=1.0)  # perentage of vertices per strand to keep (1.0=keep all, 0.5=keep half, 0.25=keep quarter)
     parser.add_argument('-ar', '--alembic_resolution', type=int, default=7) #the resolution of the alembic, higher number means more points per strand (default=7 which is probably 2^7=128 points per strands)
     parser.add_argument('-sh', '--shrinkwrap', action='store_true') #set it to true to perform a shrinkwrap of the hair so that it avoids penetrating through the body
+    parser.add_argument('--ue', action='store_true') #apply UE-friendly rotation before exporting abc
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:])
+    print("basename", args.basename)
     print("strands_subsample", args.strands_subsample)
     print("vertex_subsample", args.vertex_subsample)
     print("alembic_resolution", args.alembic_resolution)
     print("shrinkwrap", args.shrinkwrap)
+    print("ue", args.ue)
 
 
     #read npz 
@@ -234,15 +261,15 @@ def main():
 
     #save blend file
     print('saving .blend')
-    out_scene_path=os.path.join(args.out_path, "blender_scene.blend")
+    out_scene_path=os.path.join(args.out_path, f"{args.basename}.blend")
     bpy.ops.wm.save_as_mainfile(filepath=out_scene_path) 
     print('finished saving .blend')
 
 
     if do_export_alembic:
-        out_path_alembic=os.path.join(args.out_path, "hair.abc")
+        out_path_alembic=os.path.join(args.out_path, f"{args.basename}.abc")
         print("exporting hair to", out_path_alembic)
-        export_alembic(out_path_alembic, args.alembic_resolution)
+        export_alembic(out_path_alembic, args.alembic_resolution, ue_rotation=args.ue)
 
    
 if __name__ == '__main__':
